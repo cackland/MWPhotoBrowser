@@ -20,8 +20,9 @@
     UIImageView *_videoIndicator;
     UIImageView *_loadingError;
 	DACircularProgressView *_loadingIndicator;
-    UIButton *_selectedButton;
-    
+    //UIButton *_selectedButton;
+    //UIButton *_featuredButton;
+
 }
 
 @end
@@ -52,16 +53,43 @@
         [self addSubview:_videoIndicator];
         
         // Selection button
-        _selectedButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        _selectedButton = [UIButton buttonWithType:UIButtonTypeCustom];        
         _selectedButton.contentMode = UIViewContentModeTopRight;
         _selectedButton.adjustsImageWhenHighlighted = NO;
         [_selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOff" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateNormal];
         [_selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateSelected];
+        
+        /*
+        if ([_gridController.browser isIndexFeaturedImage:_index]){
+            NSLog(@"Init method - we have featured image");
+            [_selectedButton setImage:[UIImage imageNamed:@"ImageSelectedSmall.png"] forState:UIControlStateSelected];
+
+        }else{
+            NSLog(@"Init method - we DONT HAVE featured image");
+                [_selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateSelected];
+        }
+         */
+    
         [_selectedButton addTarget:self action:@selector(selectionButtonPressed) forControlEvents:UIControlEventTouchDown];
         _selectedButton.hidden = YES;
-        _selectedButton.frame = CGRectMake(0, 0, 44, 44);
+        //_selectedButton.frame = CGRectMake(0, 0, 44, 44);
+        _selectedButton.frame = CGRectMake(0, 0, 55, 55);
+
         [self addSubview:_selectedButton];
-    
+        
+        /*
+        // Featured button
+        _featuredButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        _featuredButton.contentMode = UIViewContentModeTopRight;
+        _featuredButton.adjustsImageWhenHighlighted = NO;
+        [_featuredButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOff" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateNormal];
+        [_featuredButton setImage:[UIImage imageNamed:@"ImageSelectedSmall.png"] forState:UIControlStateSelected];
+        [_featuredButton addTarget:self action:@selector(selectionButtonPressed) forControlEvents:UIControlEventTouchDown];
+        _featuredButton.hidden = YES;
+        _featuredButton.frame = CGRectMake(0, 0, 44, 44);
+        [self addSubview:_selectedButton];
+*/
+        
 		// Loading indicator
 		_loadingIndicator = [[DACircularProgressView alloc] initWithFrame:CGRectMake(0, 0, 40.0f, 40.0f)];
         _loadingIndicator.userInteractionEnabled = NO;
@@ -158,8 +186,27 @@
 }
 
 - (void)selectionButtonPressed {
+    
+    //CA Mod Start
+    if ([_gridController.browser featuredPhoto] == nil || ([_gridController.browser featuredPhoto] == [NSNull null])){
+        [_gridController.browser setFeaturedPhotoUsingIndex:_index];
+        NSLog(@"Adding a new featured photo into our photo browser as it's currently empty!");
+            [_selectedButton setImage:[UIImage imageNamed:@"ImageSelectedSmall.png"] forState:UIControlStateSelected];
+    }
+    
+    if ([_gridController.browser isIndexFeaturedImage:_index])
+    {
+        if (!_selectedButton.selected == NO){
+            [_gridController.browser setFeaturedPhoto:nil];
+        }
+    }else{
+            [_selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateSelected];
+    }
+    //CA Mod End
+
     _selectedButton.selected = !_selectedButton.selected;
     [_gridController.browser setPhotoSelected:_selectedButton.selected atIndex:_index];
+   
 }
 
 #pragma mark - Touches

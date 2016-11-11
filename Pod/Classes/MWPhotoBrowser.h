@@ -53,6 +53,13 @@
 @property (nonatomic) NSUInteger delayToHideElements;
 @property (nonatomic, readonly) NSUInteger currentIndex;
 
+//CA Mod Start
+@property (nonatomic) MWPhoto *featuredPhoto;
+-(BOOL) isIndexFeaturedImage: (NSUInteger)anIndex;
+-(void) setFeaturedPhotoUsingIndex: (NSUInteger)anIndex;
+//CA Mod End
+
+
 // Customise image selection icons as they are the only icons with a colour tint
 // Icon should be located in the app's main bundle
 @property (nonatomic, strong) NSString *customImageSelectedIconName;

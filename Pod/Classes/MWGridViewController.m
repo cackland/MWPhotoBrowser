@@ -11,6 +11,9 @@
 #import "MWPhotoBrowserPrivate.h"
 #import "MWCommon.h"
 
+
+#import "UIImage+MWPhotoBrowser.h"
+
 @interface MWGridViewController () {
     
     // Store margins for current setup
@@ -161,6 +164,16 @@
     cell.gridController = self;
     cell.selectionMode = _selectionMode;
     cell.isSelected = [_browser photoIsSelectedAtIndex:indexPath.row];
+
+    //CA Change Start
+    if ([_browser isIndexFeaturedImage:indexPath.row]){
+        //we have featured image
+        [cell.selectedButton setImage:[UIImage imageNamed:@"ImageSelectedSmall.png"] forState:UIControlStateSelected];
+    }else{
+        [cell.selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedSmallOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateSelected];
+    }
+    //CA Change End
+    
     cell.index = indexPath.row;
     UIImage *img = [_browser imageForPhoto:photo];
     if (img) {

@@ -4,7 +4,7 @@
 //
 //  Created by Michael Waterfall on 14/10/2010.
 //  Copyright 2010 d3i. All rights reserved.
-//
+//  TestCA3
 
 #import <QuartzCore/QuartzCore.h>
 #import "MWCommon.h"
@@ -700,7 +700,51 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     return value;
 }
 
-- (void)setPhotoSelected:(BOOL)selected atIndex:(NSUInteger)index {
+
+//CA Changes - START
+-(BOOL )featuredImageIsZeroIndex
+{
+    MWPhoto *aPhotoToTest = [self photoAtIndex:0];
+    if ([self featuredPhoto] == aPhotoToTest){
+        return YES;
+    }else{
+        return NO;
+    }
+    return NO;
+}
+
+-(BOOL) isIndexFeaturedImage: (NSUInteger)anIndex;
+{
+    
+    MWPhoto *aPhotoToTest = [self photoAtIndex:anIndex];
+    
+    //NSLog(@"This is our stored featured image: %@", [self featuredPhoto]);
+    //NSLog(@"...and we are testing it against this photo: %@", aPhotoToTest);
+    
+    if (![self featuredPhoto]) return NO;
+    
+    if ([self featuredPhoto] == aPhotoToTest){
+        return YES;
+    }else{
+        return NO;
+    }
+    return NO;
+}
+
+-(void) setFeaturedPhotoUsingIndex: (NSUInteger)anIndex
+{
+    MWPhoto *aPhoto = [self photoAtIndex:anIndex];
+    [self setFeaturedPhoto:aPhoto];
+}
+
+//CA Changes - END
+
+
+
+
+
+
+- (void)setPhotoSelected:(BOOL)selected atIndex:(NSUInteger)index {    
     if (_displaySelectionButtons) {
         if ([self.delegate respondsToSelector:@selector(photoBrowser:photoAtIndex:selectedChanged:)]) {
             [self.delegate photoBrowser:self photoAtIndex:index selectedChanged:selected];
@@ -769,8 +813,7 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 #pragma mark - Paging
 
 - (void)tilePages {
-	
-	// Calculate which pages should be visible
+    // Calculate which pages should be visible
 	// Ignore padding as paging bounces encroach on that
 	// and lead to false page loads
 	CGRect visibleBounds = _pagingScrollView.bounds;
@@ -799,10 +842,11 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     while (_recycledPages.count > 2) // Only keep 2 recycled pages
         [_recycledPages removeObject:[_recycledPages anyObject]];
 	
+    
 	// Add missing pages
 	for (NSUInteger index = (NSUInteger)iFirstIndex; index <= (NSUInteger)iLastIndex; index++) {
 		if (![self isDisplayingPageForIndex:index]) {
-            
+            NSLog(@"Setting up images at index %tu", index);
             // Add new page
 			MWZoomingScrollView *page = [self dequeueRecycledPage];
 			if (!page) {
@@ -842,7 +886,15 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
                 if (self.customImageSelectedIconName) {
                     selectedOnImage = [UIImage imageNamed:self.customImageSelectedIconName];
                 } else {
-                    selectedOnImage = [UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]];
+                    //CA MOD Start
+                    if ([self isIndexFeaturedImage:index]){
+                        selectedOnImage = [UIImage imageNamed:@"ImageSelected.png"];
+                        NSLog(@"Index is featured image!");
+                    }else{
+                          selectedOnImage = [UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]];
+                        NSLog(@"Image is NOT featured image");
+                    }
+                    //CA MOD End
                 }
                 [selectedButton setImage:selectedOnImage forState:UIControlStateSelected];
                 [selectedButton sizeToFit];
@@ -854,9 +906,81 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
                 selectedButton.selected = [self photoIsSelectedAtIndex:index];
             }
             
-		}
+        }
 	}
 	
+}
+
+
+
+//CA Mod - force refresh of our first page in scroll view. this gets cached at the start
+//but it coudl be our featured image, so force refresh it.
+-(void)refreshButtonImagesOnIndexZeroPage
+{
+    NSUInteger index = 0;
+    // Add missing pages
+            NSLog(@"2Setting up images at index %tu", index);
+            // Add new page
+            MWZoomingScrollView *page = [self dequeueRecycledPage];
+            if (!page) {
+                page = [[MWZoomingScrollView alloc] initWithPhotoBrowser:self];
+            }
+            [_visiblePages addObject:page];
+            [self configurePage:page forIndex:index];
+            
+            [_pagingScrollView addSubview:page];
+            MWLog(@"Added page at index %lu", (unsigned long)index);
+            
+            // Add caption
+            MWCaptionView *captionView = [self captionViewForPhotoAtIndex:index];
+            if (captionView) {
+                captionView.frame = [self frameForCaptionView:captionView atIndex:index];
+                [_pagingScrollView addSubview:captionView];
+                page.captionView = captionView;
+            }
+            
+            // Add play button if needed
+            if (page.displayingVideo) {
+                UIButton *playButton = [UIButton buttonWithType:UIButtonTypeCustom];
+                [playButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/PlayButtonOverlayLarge" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateNormal];
+                [playButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/PlayButtonOverlayLargeTap" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateHighlighted];
+                [playButton addTarget:self action:@selector(playButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+                [playButton sizeToFit];
+                playButton.frame = [self frameForPlayButton:playButton atIndex:index];
+                [_pagingScrollView addSubview:playButton];
+                page.playButton = playButton;
+            }
+            
+            // Add selected button
+            if (self.displaySelectionButtons) {
+                UIButton *selectedButton = [UIButton buttonWithType:UIButtonTypeCustom];
+                [selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedOff" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateNormal];
+                UIImage *selectedOnImage;
+                if (self.customImageSelectedIconName) {
+                    selectedOnImage = [UIImage imageNamed:self.customImageSelectedIconName];
+                } else {
+                    //CA MOD Start
+                    if ([self isIndexFeaturedImage:index]){
+                        selectedOnImage = [UIImage imageNamed:@"ImageSelected.png"];
+                        NSLog(@"2Index is featured image!");
+                    }else{
+                        selectedOnImage = [UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]];
+                        NSLog(@"2Image is NOT featured image");
+                    }
+                    //CA MOD End
+                }
+                [selectedButton setImage:selectedOnImage forState:UIControlStateSelected];
+                [selectedButton sizeToFit];
+                selectedButton.adjustsImageWhenHighlighted = NO;
+                [selectedButton addTarget:self action:@selector(selectedButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+                selectedButton.frame = [self frameForSelectedButton:selectedButton atIndex:index];
+                [_pagingScrollView addSubview:selectedButton];
+                page.selectedButton = selectedButton;
+                selectedButton.selected = [self photoIsSelectedAtIndex:index];
+            }
+    
+    
+
 }
 
 - (void)updateVisiblePageStates {
@@ -1151,8 +1275,10 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
 #pragma mark - Interactions
 
 - (void)selectedButtonTapped:(id)sender {
+    
+
+    
     UIButton *selectedButton = (UIButton *)sender;
-    selectedButton.selected = !selectedButton.selected;
     NSUInteger index = NSUIntegerMax;
     for (MWZoomingScrollView *page in _visiblePages) {
         if (page.selectedButton == selectedButton) {
@@ -1160,9 +1286,38 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
             break;
         }
     }
+    
+    //CA Mod Start
+    if ([self featuredPhoto] == nil || ([self featuredPhoto] == [NSNull null])){
+        NSLog(@"Setting featured image");
+        [self setFeaturedPhotoUsingIndex:index];
+        [selectedButton setImage:[UIImage imageNamed:@"ImageSelected.png"] forState:UIControlStateSelected];
+    }
+    
+    if ([self isIndexFeaturedImage:index])
+    {
+        NSLog(@"Have selected featured image");
+        if (!selectedButton.selected == NO){
+            NSLog(@"Setting featured image to nil");
+            [self setFeaturedPhoto:nil];
+        }
+    }else{
+        NSLog(@"Is not featured image, setting to blue");
+        [selectedButton setImage:[UIImage imageForResourcePath:@"MWPhotoBrowser.bundle/ImageSelectedOn" ofType:@"png" inBundle:[NSBundle bundleForClass:[self class]]] forState:UIControlStateSelected];
+    }
+    //CA Mod End
+    
+    selectedButton.selected = !selectedButton.selected;
+
+    
     if (index != NSUIntegerMax) {
         [self setPhotoSelected:selectedButton.selected atIndex:index];
     }
+    
+   
+
+    
+    
 }
 
 - (void)playButtonTapped:(id)sender {
@@ -1360,6 +1515,11 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     
     if (!_gridController) return;
     
+    //CA MOD
+    if ([self featuredImageIsZeroIndex]){
+        [self refreshButtonImagesOnIndexZeroPage];
+    }
+    
     // Remember previous content offset
     _currentGridContentOffset = _gridController.collectionView.contentOffset;
     
@@ -1380,6 +1540,8 @@ static void * MWVideoPlayerObservation = &MWVideoPlayerObservation;
     // Update
     [self updateNavigation];
     [self updateVisiblePageStates];
+    
+   
     
     // Animate, hide grid and show paging scroll view
     [UIView animateWithDuration:0.3 animations:^{
